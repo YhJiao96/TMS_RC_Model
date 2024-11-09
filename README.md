@@ -29,10 +29,10 @@ While using the SimNIBS, one most important thing to do is to build or used the 
 In our project, we used a built-up head model provided by SimNIBS, which can be found at:
 ```shell
 /simnibs_examples/ernie/m2m_ernie/
-
+```
 
 ### 1.3 Convert MNI to Subject Coordinates
 Run in your terminal with below commands(make sure you have alread installed the **SimNIBs**):
 ```shell
 mni2subject_coords -m simnibs_examples/ernie/m2m_ernie/ -c -42 28 21  -o subject_TMS_coords.csv
-
+```
