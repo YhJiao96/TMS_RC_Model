@@ -1,3 +1,7 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%               Parameter Part               %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Define the number of nodes in the RC network
 n = 5;
 
@@ -47,7 +51,6 @@ end
 %%%%%%%%%%%%%%
 
 
-
 % Set initial voltages for each node,in this case we choose the node 1 as
 % input node with 1V source injected 
 V0 = zeros(n, 1);
@@ -55,16 +58,21 @@ locationV = 1;       % Set initial voltage at Node 1 as TMS input
 V0(locationV) = 1;   % Voltage 1V applied at Node 1
 
 
+% Define simulation time scale and number of frame(time resolution)
+T = 0.4;
+num_frame = 100;
 
-% Define simulation time range
-T = [0 0.4];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%             Calculation Part               %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 % Solve the differential equations for the RC circuit with passed parameter
 % R and C of this RC network
 sol = ode45(@(t, v) RCtoy(t, v, R, C), T, V0);
 
 % Define time points for analysis
-t = linspace(0, 0.4, 100);
+t = linspace(0, T, num_frame);
 [v, vd] = deval(sol, t);
 
 % Initialize current and positive current matrices
@@ -97,6 +105,11 @@ for i = 1:n
     Q(i, :) = 0.5 * C(i) .* (v(i, :)).^2;  % Stored energy
     Qd(i, :) = Q(i, :) - 0.5 * C(i) * (V0(i)^2); % Delta of stored energy from initial state
 end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%                 Plot Part                  %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Plot results: Voltage over time for each node
 figure;
@@ -154,7 +167,11 @@ legend('Node1');
 ax = gca;
 ax.FontSize = 12;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%               Function Part                %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Function defining the differential equations for the RC circuit
 function dvdt = RCtoy(t, v, R, C)
     n = length(v);  % Number of nodes
