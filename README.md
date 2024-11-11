@@ -49,4 +49,49 @@ The result is written in the `subject_TMS_coords.csv` and in this case the subje
 ### 1.4 Set the Coil's Coordinate and Angle in SimNIBS
 After get the subject coordinate, the next step is set the TMS coil's coordinate and angle in the SimNIBS. The angle we used in this setup is the vector type: `[0 1 0]` in the approximate of the coil angle of 45 degree against the brain surface.
 
-With the coordinate and angle setup, we can then run the simulation and get the result with a output file named: `ernie_TMS_1-0001_Magstim_70mm_Fig8_nii_scalar.msh` in your output folder.
+
+### 1.5 Run the Simulation and Extract the Electric Field of ROI  
+With the coordinate and angle setup, we can then run the simulation and get the result with a output file named: `ernie_TMS_1-0001_Magstim_70mm_Fig8_nii_scalar.msh` in your output folder.(The simulation result output `.msh` file name is based on the head model names and the coils name, so it could be different file name from this example).
+And this output file contains the 3D space's electric field and we want to extract the E-field on our white matter surface. In this project we use the [HCP S1200 group average surfaces](https://www.humanconnectome.org/study/hcp-young-adult/article/s1200-group-average-data-release).
+
+Before extract this electric field on this surface map, we also need to install the [Connectome Workbench](https://www.humanconnectome.org/software/get-connectome-workbench) for its command-line program.
+(There seems be some issues on *MacOS with M-series chips*, use an intel chip one instead or Windows version to use the command-line).
+
+We also need to list the nodes of our interest, I have upload the csv file of the high-resolution(fs32k) structural connectome nodes' coordinate in subject space named `subject_coord_91k.csv`. This csv file contains the subject coordinates in the same order with our structural connectome matrix.
+
+Run in your terminal with the below commands to get the E-field of those nodes in the structural connectome matrix:
+
+
+### 1.5 Run the Simulation and Extract the Electric Field at Regions of Interest (ROI)
+
+After setting up the TMS coil position and angle, run the simulation in SimNIBS. The output will generate a file (e.g., `ernie_TMS_1-0001_Magstim_70mm_Fig8_nii_scalar.msh`) in your designated output folder. This `.msh` file contains the 3D electric field distribution from the simulation.
+
+In this project, we aim to extract the electric field values specifically on the **white matter surface**. To do this, we’ll use the [HCP S1200 group average surfaces](https://www.humanconnectome.org/study/hcp-young-adult/article/s1200-group-average-data-r...) as a reference surface.
+
+#### Requirements
+
+Before extracting electric field data on the surface map, you need to install the [Connectome Workbench](https://www.humanconnectome.org/software/get-connectome-workbench) software. This provides the `wb_command` utility, which includes the `get_fields_at_coordinates` function we will use.
+
+> **Note**: If you’re on a Mac with an M-series chip, you may encounter compatibility issues with the command-line tools. If possible, use a computer with an Intel chip or a Windows version of Connectome Workbench to ensure functionality.
+
+#### Preparing Coordinates of Interest
+
+To extract the electric field at specific nodes in the structural connectome, use the file `subject_coord_91k.csv`, which contains high-resolution (fs32k) structural connectome nodes in subject space. This CSV file lists the subject coordinates in the same order as the nodes in the structural connectivity matrix.
+
+- **CSV File**: `subject_coord_91k.csv`
+- **Uploaded this sample csv file at:**: `/data/subject_coord_91k.csv`
+
+#### Extracting E-Field Values at the Specified Nodes
+
+Use the following command in your terminal to extract the electric field values at the specified coordinates from your simulation output file:
+
+```shell
+get_fields_at_coordinates -s <path_to_csv>/subject_coord_91k.csv -m <path_to_simnibs_result>/ernie_TMS_1-0001_Magstim_70mm_Fig8_nii_scalar.msh
+```
+
+- Replace `<path_to_csv>` with the directory path to the file `subject_coord_91k.csv` you placed.
+- Replace `<path_to_simnibs_result>` with the directory path same as the path you used for your SimNIBS output folder.
+
+After this command you will get a new csv file named `subject_coord_91k_normE.csv` which contains the extracted E-field of the structural connectome network.
+
+
