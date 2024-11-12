@@ -91,6 +91,7 @@ In this step, we model the brain’s structural connectivity as a resistor-capac
 ### 2.1 Toy Model (Five-Node Model)
 
 The toy model provides a simplified version of the RC network, using only five nodes(or any n nodes if you wish). This smaller network allows us to implement and test the basic principles of the RC circuit model and evaluate the effects of TMS-driven stimulation in a manageable setup. Each node represents a distinct "region" with a capacitor connected to the ground and each connection between nodes is treated as a resistor.
+**MATLAB Script**: The script for the toy model (`RC_toy.m`) is available in the repository. This script allows users to modify the number of nodes, resistance, and capacitance values to fit your own setup.
 
 ### 2.2 Atlas Segmentation Model
 
