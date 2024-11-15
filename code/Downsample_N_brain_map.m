@@ -132,3 +132,34 @@ for i = 1:num_groups
         end
     end
 end
+
+
+%%
+% Downsample the Voltage in SimNIBS
+% Load the original 91k voltage data
+filename = 'subject_coord_91k_normE.csv';
+normE = importdata(filename);  % 91,282-element array of voltages
+
+% Initialize the downsampled voltage array
+V_downsampled = zeros(num_groups, 1);  % Downsampled voltage array
+
+% Loop through each group in group_indices to calculate the average voltage
+for i = 1:num_groups
+    % Get indices for nodes in the current group
+    nodes_in_group = group_indices{i};
+    
+    % Compute the average voltage for this group
+    V_downsampled(i) = mean(normE(nodes_in_group));
+end
+
+
+%%
+% Save the variables into mat file
+% Save Downsampled SC Matrix
+save('SC_downsampled.mat', 'SC_downsampled');
+
+% Save Downsampled Distance Matrix
+save('D_downsampled.mat', 'D_downsampled');
+
+% Save Downsampled Initial Voltage Vector
+save('V_downsampled.mat', 'V_downsampled');
