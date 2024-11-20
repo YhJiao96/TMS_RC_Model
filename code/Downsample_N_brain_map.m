@@ -1,165 +1,146 @@
-% Load coordinates
+clear all
+%% Load coordinates and atlas labels
 file_path = './mnipositionc.csv';
-your_coords = readmatrix(file_path);
-coords = your_coords;   % Nx3 matrix of 3D node coordinates
+coords = readmatrix(file_path);  % Nx3 matrix of 3D node coordinates
 
-% Adjustable parameters
-k = 10;                 % Target cluster size
-max_dist = 10;          % Maximum allowable distance within a cluster (in mm)
-
-% Load atlas labels
 label_data = readtable('Subcortex-Sina.csv', 'ReadVariableNames', false);
-num_nodes = 91282;
+num_nodes = size(coords, 1);
 labels = zeros(num_nodes, 1);  % Initialize labels array
 
-% Assign labels to nodes based on start and end indices in the atlas file
+% Assign labels to nodes based on atlas information
 for i = 1:height(label_data)
-    start_idx = label_data.Var2(i);
-    end_idx = label_data.Var4(i);
-    labels(start_idx:end_idx) = i;  % Assign unique label for each region
+    labels(label_data.Var2(i):label_data.Var4(i)) = i;
 end
 
-% Get unique region labels
+%% Adjustable parameters
+k = 10;                 % Target group size
+Dth = 5;               % Distance threshold (in mm)
+
+%% Precompute k-d Tree for Fast Neighbor Search
+kdtree = createns(coords, 'NSMethod', 'kdtree');
+
+%% Initialize variables
+visited = false(num_nodes, 1);  % Track visited nodes globally
+group_indices = {};             % Store indices of nodes in each group
+group_centroids = [];           % Store the centroid of each group
+
+%% Cluster nodes within each region
 unique_labels = unique(labels);
-
-% Initialize variables for tracking
-visited = false(size(coords, 1), 1);  % Track visited nodes
-downsampled_coords = [];  % Store downsampled coordinates here
-group_indices = {};       % Cell array to store each downsampled group's node indices
-
-% Loop over each region in the atlas
 for region_idx = unique_labels'
-    region_nodes = find(labels == region_idx);  % Nodes within this atlas region
-    region_visited = visited(region_nodes);     % Track visited nodes within the region
+    if region_idx == 0  % Skip unlabelled nodes
+        continue;
+    end
 
+    % Find nodes in the current region
+    region_nodes = find(labels == region_idx);
+    
+    region_coords = coords(region_nodes, :);  % Subset of coordinates for this region
+
+    % Initialize visitation tracking for this region
+    region_visited = false(length(region_nodes), 1);
+
+    % While there are unvisited nodes in the region
     while any(~region_visited)
-        % Find the next unvisited node within the region
-        start_idx = region_nodes(find(~region_visited, 1));
+        %% Step 1: Start Node Selection
+        if exist('next_start_idx', 'var') && ~isempty(next_start_idx)
+            % Use the next nearest neighbor as the starting point
+            start_idx = next_start_idx;
+        else
+            % Default to the first unvisited node
+            start_idx = find(~region_visited, 1);
+        end
+        start_node_global_idx = region_nodes(start_idx);  % Global index of the node
 
-        % Find k nearest neighbors
-        [neighbors_idx, distances] = knnsearch(coords, coords(start_idx, :), 'K', k);
+        %% Step 2: Neighbor Search
 
-        % Filter neighbors by distance and within the same region
-        valid_neighbors = neighbors_idx(distances <= max_dist & ismember(neighbors_idx, region_nodes));
+        unvisited_indices = find(~region_visited);  % Indices of unvisited nodes within the region
+        % Perform knnsearch only among unvisited nodes
+        [local_neighbor_indices, distances] = knnsearch(region_coords(unvisited_indices, :), region_coords(start_idx, :), 'K', k);
 
-        % Additional merging condition if the next group is smaller than k/2
-        if numel(valid_neighbors) < k / 2
-            % Look for additional nodes that are close enough to merge
-            [extra_neighbors, extra_distances] = knnsearch(coords, coords(start_idx, :), 'K', k * 2);
-            additional_nodes = extra_neighbors(extra_distances <= max_dist);
-            if all(ismember(additional_nodes, region_nodes)) && numel(additional_nodes) > numel(valid_neighbors)
-                valid_neighbors = [valid_neighbors; additional_nodes];
+        % Map local indices back to the global indices within the region
+        neighbor_indices = unvisited_indices(local_neighbor_indices);
+
+        % Filter neighbors by distance threshold
+        valid_neighbors = neighbor_indices(distances <= Dth);
+        group_node_indices = region_nodes(valid_neighbors);  % Global indices of valid neighbors
+
+        %% Step 3: Centroid Computation
+        group_coords = coords(group_node_indices, :);
+        group_centroid = mean(group_coords, 1);
+
+        %% Step 4: Merging Small Groups
+        if numel(valid_neighbors) < k / 2 && ~isempty(group_centroids)
+            % Check the distance to the last group's centroid
+            last_centroid = group_centroids(end, :);
+            dist_to_last_centroid = norm(group_centroid - last_centroid);
+
+            % Merge if within distance threshold and size constraint
+            if dist_to_last_centroid <= Dth && ...
+               (numel(group_indices{end}) + numel(valid_neighbors)) <= round(3 * k / 2)
+                % Merge current group into the last group
+                group_indices{end} = union(group_indices{end}, group_node_indices);
+                merged_coords = coords(group_indices{end}, :);
+                group_centroids(end, :) = mean(merged_coords, 1);  % Update last group's centroid
+
+                % Mark nodes as visited
+                region_visited(valid_neighbors) = true;
+                visited(group_node_indices) = true;
+
+                % Skip creating a new group since it was merged
+                % Set next_start_idx to the closest unvisited neighbor
+                unvisited_indices = find(~region_visited);
+                if ~isempty(unvisited_indices)
+                    local_idx = knnsearch(region_coords(unvisited_indices, :), region_coords(start_idx, :), 'K', 1);
+                    next_start_idx = unvisited_indices(local_idx);  % Map local index back to global index
+                else
+                    next_start_idx = [];
+                end
+                continue;
             end
         end
 
-        % Mark these nodes as visited
+        %% Step 5: Update Status
+        % Mark nodes in the current group as visited
         region_visited(valid_neighbors) = true;
-        visited(valid_neighbors) = true;
+        visited(group_node_indices) = true;
 
-        % Store indices of nodes in the current group
-        group_indices{end + 1} = valid_neighbors;
+        % Store the group's indices and centroid
+        group_indices{end + 1} = group_node_indices;  % Append group indices
+        group_centroids = [group_centroids; group_centroid];  % Append group centroid
 
-        % Compute the centroid of this cluster
-        cluster_coords = coords(valid_neighbors, :);
-        centroid = mean(cluster_coords, 1);
-
-        % Append centroid to downsampled coordinates
-        downsampled_coords = [downsampled_coords; centroid];
-    end
-end
-
-
-%%
-% Downsample the SC matrix
-
-
-load SCCount.mat; % load the SC matrix 
-GroupSC_Count = spconvert(SCCount);
-DiagGSC = diag(diag(GroupSC_Count));
-SC = GroupSC_Count-DiagGSC;
-
-num_groups = numel(group_indices);  % Number of downsampled groups
-SC_downsampled = zeros(num_groups); % Downsampled SC matrix
-
-% Loop over each pair of groups to compute the downsampled SC matrix
-for i = 1:num_groups
-    for j = i:num_groups
-        % Get indices for nodes in each group
-        nodes_in_group_i = group_indices{i};
-        nodes_in_group_j = group_indices{j};
-        
-        % Extract submatrix for connections between group i and group j
-        if i == j
-            % Ignore intra-group connections by setting to zero
-            SC_downsampled(i, j) = 0;
+        %% Step 6: Update Next Start Node
+        % Find the closest unvisited neighbor using k-d tree
+        unvisited_indices = find(~region_visited);
+        if ~isempty(unvisited_indices)
+            % Perform knnsearch for the closest unvisited neighbor
+            local_idx = knnsearch(region_coords(unvisited_indices, :), region_coords(start_idx, :), 'K', 1);
+            next_start_idx = unvisited_indices(local_idx);  % Map local index back to global index
         else
-            % Average SC values between nodes in group i and nodes in group j
-            submatrix = SC(nodes_in_group_i, nodes_in_group_j);
-            SC_downsampled(i, j) = mean(submatrix(:));
-            SC_downsampled(j, i) = SC_downsampled(i, j); % Symmetric matrix
+            next_start_idx = [];  % No unvisited nodes remain
         end
+
     end
 end
 
+%% Save Results
+% Save group_indices (list of all groups and their node indices)
+save('group_indices.mat', 'group_indices');
 
-%%
-% Downsample the Distance matrix
+% Save group centroids
+save('group_centroids.mat', 'group_centroids');
 
-load SCLength.mat; % load the Distance matrix 
-GroupSC_Length = spconvert(SCLength);
-DiagGSL = diag(diag(GroupSC_Length));
-D = GroupSC_Length - DiagGSL;
-
-% Initialize the downsampled distance matrix
-D_downsampled = zeros(num_groups);  % Downsampled Distance matrix
-
-% Loop over each pair of groups to compute the downsampled distance matrix
-for i = 1:num_groups
-    for j = i:num_groups
-        % Get indices for nodes in each group
-        nodes_in_group_i = group_indices{i};
-        nodes_in_group_j = group_indices{j};
-        
-        % Extract submatrix for distances between group i and group j
-        if i == j
-            % Ignore intra-group distances by setting to zero
-            D_downsampled(i, j) = 0;
-        else
-            % Average distance values between nodes in group i and nodes in group j
-            submatrix = D(nodes_in_group_i, nodes_in_group_j);
-            D_downsampled(i, j) = mean(submatrix(:));
-            D_downsampled(j, i) = D_downsampled(i, j); % Symmetric matrix
-        end
-    end
+% Optionally, save a node-to-group mapping
+node_to_group = zeros(num_nodes, 1);
+for group_id = 1:numel(group_indices)
+    node_to_group(group_indices{group_id}) = group_id;
 end
+save('node_to_group_mapping.mat', 'node_to_group');
 
+% Save group information in a human-readable format (CSV)
+group_size = cellfun(@numel, group_indices);
+group_table = table((1:numel(group_indices))', group_size', group_centroids(:, 1), group_centroids(:, 2), group_centroids(:, 3), ...
+                    'VariableNames', {'GroupID', 'Size', 'CentroidX', 'CentroidY', 'CentroidZ'});
 
-%%
-% Downsample the Voltage in SimNIBS
-% Load the original 91k voltage data
-filename = 'subject_coord_91k_normE.csv';
-normE = importdata(filename);  % 91,282-element array of voltages
+writetable(group_table, 'group_summary.csv');
 
-% Initialize the downsampled voltage array
-V_downsampled = zeros(num_groups, 1);  % Downsampled voltage array
-
-% Loop through each group in group_indices to calculate the average voltage
-for i = 1:num_groups
-    % Get indices for nodes in the current group
-    nodes_in_group = group_indices{i};
-    
-    % Compute the average voltage for this group
-    V_downsampled(i) = mean(normE(nodes_in_group));
-end
-
-
-%%
-% Save the variables into mat file
-% Save Downsampled SC Matrix
-save('SC_downsampled.mat', 'SC_downsampled');
-
-% Save Downsampled Distance Matrix
-save('D_downsampled.mat', 'D_downsampled');
-
-% Save Downsampled Initial Voltage Vector
-save('V_downsampled.mat', 'V_downsampled');
+disp('Downsampling completed and results saved.');
