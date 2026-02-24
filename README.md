@@ -107,5 +107,10 @@ The high-resolution model employs a full size structural connectome with maximum
 
 Each model builds on the previous one, allowing us to gradually scale the RC circuit from a simplified system to a high-resolution network that closely represents the actual brain connectome. In the matlab codes we will introduce the process to build and run those models in detail, please look through each matlab scripts for a better understanding of the models.
 
+## Step 3: Setup Boundary Conditions
+
+In this step, we setup all the boundary conditions for our ODE system: initial boundary and time-scale length setup. These boundary conditions is nessecary for our model to solve the dynamic solutions for each node's voltage equations.
+
+### 3.1 Input bounday condition
 
 
