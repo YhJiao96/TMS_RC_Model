@@ -1,0 +1,9 @@
+# Python >= 3.11. Versions used for the manuscript figures (2026-10/11).
+numpy>=2.0
+scipy>=1.13
+matplotlib>=3.8
+nibabel>=5.2        # fig5_spin_test.py (atlas dlabel), rc_ftract_cerebro.py
+h5py>=3.10          # export_fig3a_bootstrap_ci.py, only when reading the MATLAB rc_outputs_minimal.mat
+pillow>=10          # render_three_currents_four_timepoints.py
+# Fig. 4 brain renders only: Cerebro_Viewer (https://github.com/sina-mansour/Cerebro_Viewer)
+# Cerebro_Viewer==0.0.10.5
