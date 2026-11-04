@@ -11,7 +11,7 @@ prob_thr = 0.25;                   % probability threshold
 time_max = 200;                    % upper bound for valid empirical delay
 
 % Mask: valid pairs only
-mask_valid = isfinite(emp_TTP) & emp_TTP > 0 & emp_TTP <= time_max &  N_imp >= 100; %& F_cor(1:360,1:360) < 0.25;
+mask_valid = isfinite(emp_TTP) & emp_TTP > 0 & emp_TTP <= time_max &  N_imp >= 100 & F_cor(1:360,1:360) < 0.25;
 emp_vals = delay_peak_matrix(mask_valid);
 sim_vals = sim_TTP(mask_valid);
 D_cor = D(1:360,1:360);
