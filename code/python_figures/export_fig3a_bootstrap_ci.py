@@ -139,7 +139,9 @@ def load_rc_matrix(path: Path, order_ft: np.ndarray) -> np.ndarray:
 def load_comparators(
     precomputed: Path, bct_file: Path | None, order_sc: np.ndarray
 ) -> tuple[dict[str, np.ndarray], dict[str, str]]:
-    pre = loadmat(precomputed, squeeze_me=True)
+    # Precomputed_Models.mat (earlier copies of the comparators) is optional: it is
+    # only used to cross-check bct_measures.mat, or as the source when no BCT file is given.
+    pre = loadmat(precomputed, squeeze_me=True) if Path(precomputed).is_file() else None
     sources: dict[str, str] = {}
     full: dict[str, np.ndarray] = {}
     if bct_file is not None:
@@ -152,7 +154,7 @@ def load_comparators(
         # Precomputed_Models.mat stores SI with the sign flipped and zeros on
         # the diagonal; compare |values| off the diagonal only.
         off_diagonal = ~np.eye(full["SI"].shape[0], dtype=bool)
-        for key in ("SI", "SPE", "CMY"):
+        for key in ("SI", "SPE", "CMY") if pre is not None else ():
             a = np.abs(full[key])[off_diagonal]
             b = np.abs(np.asarray(pre[key], float))[off_diagonal]
             finite = np.isfinite(a) & np.isfinite(b)
@@ -163,6 +165,10 @@ def load_comparators(
                     f"(max abs off-diagonal diff {diff:.3g})."
                 )
     else:
+        if pre is None:
+            raise FileNotFoundError(
+                f"Neither --bct-file nor {precomputed} is available; run comparators/bct_measures.m first."
+            )
         for key in ("SI", "SPE", "CMY"):
             full[key] = np.asarray(pre[key], dtype=float)
             sources[key] = str(precomputed)
