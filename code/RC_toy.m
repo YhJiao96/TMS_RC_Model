@@ -1,6 +1,5 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%               Parameter Part               %%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%    Parameter Part 
 
 % Define the number of nodes in the RC network
 n = 5;
@@ -62,9 +61,8 @@ V0(locationV) = 1;   % Voltage 1V applied at Node 1
 T = 0.4;
 num_frame = 100;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%             Calculation Part               %%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%    Calculation Part 
 
 
 % Solve the differential equations for the RC circuit with passed parameter
@@ -107,9 +105,7 @@ for i = 1:n
 end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%                 Plot Part                  %%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%    Plot Part                  
 
 % Plot results: Voltage over time for each node
 figure;
@@ -168,9 +164,7 @@ ax = gca;
 ax.FontSize = 12;
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%               Function Part                %%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%    Function Part   
 
 % Function defining the differential equations for the RC circuit
 function dvdt = RCtoy(t, v, R, C)
