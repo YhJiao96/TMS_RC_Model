@@ -28,7 +28,7 @@ prob_value_cor = Prob_sorted;
 
 SC_sorted = SC(sc_order_1, sc_order_1);
 D_sorted = D(d_order_1,d_order_1);
-F_sorted = F(f_order_1,f_order_1);
+F_sorted = F;
 SC = SC_sorted; % strength
 D = D_sorted;
 %SC(F_sorted<0.25)=0;
