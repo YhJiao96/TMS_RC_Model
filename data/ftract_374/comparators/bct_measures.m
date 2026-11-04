@@ -1,0 +1,30 @@
+disp(version);
+addpath('/Users/yihjiao/Documents/MATLAB/BCT/2019_03_03_BCT');
+S = load('/Users/yihjiao/Documents/MATLAB/yihang_ftract/X_struct_v1-19_FCO.mat', 'X_struct');
+W  = double(S.X_struct.v8.W);  ED = double(S.X_struct.v8.ED); clear S;
+W(~isfinite(W)) = 0; ED(~isfinite(ED)) = 0;
+n = size(W,1); fprintf('n=%d, nnz=%d, symmetric=%d\n', n, nnz(W), isequal(W, W'));
+% definitions copied from RC_FTRACT_ODE_V23.m (lines 327-346)
+MFPT = mean_first_passage_time(W); Diff_eff = 1./MFPT; Diff_eff(isinf(Diff_eff)) = 0;
+SI = search_information(W, 1./W); SI(isinf(SI)) = 0;
+s = diag(sum(W,1)); CMY = expm(s^(-1/2)*W*s^(-1/2));
+L = 1./W; L(L == Inf) = 0;
+[~, ~, PL_wei, ~, ~] = navigation_wu(L, ED); Nav_eff = 1./PL_wei; Nav_eff(isinf(Nav_eff)) = 0;
+[SPL, ~, ~] = distance_wei_floyd(1./W); SPE = 1./SPL; SPE(isinf(SPL)) = 0;
+% alternative SPE/Nav with -log(SC) lengths (commented variant in V23 / used in RC_ftract_boot.m)
+Lneg = -log(W); Lneg(Lneg == Inf) = 0;
+[SPLn, ~, ~] = distance_wei_floyd(Lneg); SPE_neglog = 1./SPLn; SPE_neglog(isinf(SPLn)) = 0;
+[~, ~, PLn, ~, ~] = navigation_wu(Lneg, ED); Nav_neglog = 1./PLn; Nav_neglog(isinf(Nav_neglog)) = 0;
+P = load('/Users/yihjiao/Documents/MATLAB/yihang_ftract/Precomputed_Models.mat');
+cmp = @(a,b) max(abs(a(:)-b(:)), [], 'omitnan');
+fprintf('Precomp.SI  vs search_information(W,1./W): maxdiff=%.3g\n', cmp(P.SI, SI));
+fprintf('Precomp.SPE vs 1./SPL(1./W):             maxdiff=%.3g\n', cmp(P.SPE, SPE));
+fprintf('Precomp.SPE vs 1./SPL(-log W):           maxdiff=%.3g\n', cmp(P.SPE, SPE_neglog));
+fprintf('Precomp.CMY vs expm(...):                 maxdiff=%.3g\n', cmp(P.CMY, CMY));
+fprintf('Precomp.Nav vs Nav(1./W):                 maxdiff=%.3g\n', cmp(P.Nav, Nav_eff));
+fprintf('Precomp.Nav vs Nav(-log W):               maxdiff=%.3g\n', cmp(P.Nav, Nav_neglog));
+fprintf('Precomp.Nav vs W:                         maxdiff=%.3g\n', cmp(P.Nav, W));
+fprintf('Precomp.Diff vs 1./MFPT:                  maxdiff=%.3g\n', cmp(P.Diff, Diff_eff));
+fprintf('Precomp.RC_Model symmetric=%d\n', isequal(P.RC_Model, P.RC_Model'));
+save(fullfile(getenv('OUTDIR'), 'bct_measures.mat'), 'W', 'ED', 'Diff_eff', 'SI', 'CMY', 'Nav_eff', 'SPE', 'SPE_neglog', 'Nav_neglog', '-v7');
+disp('saved');
