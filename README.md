@@ -112,6 +112,8 @@ In this step, we model the brain’s structural connectivity as a resistor-capac
 
 ### 2.1 Toy Model (Five-Node Model)
 
+`code/RC_toy.m` builds an `n`-node RC network (default `n = 5`) with user-set resistances and capacitances, stimulates one node and plots the voltages.
+
 The toy model provides a simplified version of the RC network, using only five nodes(or any n nodes if you wish). This smaller network allows us to implement and test the basic principles of the RC circuit model and evaluate the effects of TMS-driven stimulation in a manageable setup. Each node represents a distinct "region" with a capacitor connected to the ground and each connection between nodes is treated as a resistor.
 **MATLAB Script**: The script for the toy model (`RC_toy.m`) is available in the repository. This script allows users to modify the number of nodes, resistance, and capacitance values to fit your own setup.
 
@@ -159,4 +161,44 @@ In this step, we setup all the boundary conditions for our ODE system: initial b
 
 ### 3.1 Input bounday condition
 
+The stimulus pulse (1 ms for SEEG, < 1 ms for TMS) is short compared with the 50–200 ms propagation window, so it is applied as an **initial voltage** rather than a sustained current: the capacitor of each stimulated node is charged at `t = 0` and no external current flows afterwards (`I_i(t) = 0` for `t > 0`).
+
+| Modality | Script | Initial condition |
+|---|---|---|
+| Direct electrical stimulation (F-TRACT) | `code/ftract_seeg/RC_FTRACT_ODE_V23.m`, `RC_ftract_Caio_data.m`, `rc_visualization_demo.m` | `V0 = 0` everywhere, `V0(stim) = 1`. The loop runs over all 360 cortical stimulation sites in turn. The absolute value is arbitrary; only relative patterns are interpreted. |
+| TMS, E-field input | `code/RC_high_res_downsampled.m` | `V0 = E_downsampled` (cluster-mean E-field magnitude from Step 1.5 / 2.3). In the released version the field is concentrated on the cluster with the largest E-field (`V(max_idx) = 2*max_val`); the commented alternatives apply the whole field or its top percentile. |
+| TMS + auditory co-stimulation | `code/tms_fmri/RC_High_Mapping.m` | As above plus a second and third source at the mass centres of the left and right auditory cortices, to model the coil click (Supplementary Fig. S7). |
+| Toy / atlas tutorial | `code/RC_toy.m`, `RC_atlas_*.m` | `V0(target_node) = 1`, or the Schaefer-parcel mean E-field. |
+
+### 3.2 Resistance and capacitance from the connectome
+
+Each connection is a bundle of parallel axons with length `L_ij` and an effective cross-section proportional to the connectivity weight `W_ij`:
+
+```text
+R_ij = rho * L_ij / W_ij        (W_ij > 0; no resistor where W_ij = 0)
+G_ij = 1 / R_ij
+```
+
+`rho` is a global scale fixed at 1 in all released scripts (it only rescales time). The scripts build `R = D ./ SC`, set non-finite entries to zero, and `G(mask) = 1./R(mask)`. In the F-TRACT scripts, connections present in fewer than 25 % of participants (`F < 0.25`) are removed where stated.
+
+Capacitance scales with the anatomical size of a node:
+
+```text
+C_i = c * A_i
+```
+
+* **High-resolution TMS model**: `A_i` is the number of grayordinates in cluster `i` (`C(group) = group_size * 100` in `RC_high_res_downsampled.m`), so larger clusters store more charge. At full 91k resolution every node is one grayordinate and `C` is uniform.
+* **Parcel-level F-TRACT model**: uniform capacitance (`C = 1` in `RC_FTRACT_ODE_V23.m` and `rc_visualization_demo.m`, `C = 0.1` in `RC_ftract_Caio_data.m`). Parcel size is not used at this resolution.
+
+### 3.3 Time scale and resolution
+
+| Model | `time_scale` | `num_points` | Solver |
+|---|---|---|---|
+| High-resolution TMS (9,656 nodes) | 50 (model ms) | 100 | `ode23`, evaluated with `deval` |
+| Parcel-level F-TRACT | 200 ms | 2,000 (`rc_visualization_demo.m`) or 5,000 (`RC_FTRACT_ODE_V23.m`) | `ode45` |
+| Atlas / toy | 0.5–1 | 100 | `ode45` |
+
+Simulated time is model time: the parameters were scaled so that the dominant transient falls within the window of cortico-cortical evoked potentials, and results are interpreted as relative patterns and relative timing.
+
+---
 
