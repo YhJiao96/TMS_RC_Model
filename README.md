@@ -245,3 +245,20 @@ and store, with rows = target nodes and columns = stimulation nodes:
 `rc_visualization_demo.m` saves everything in `rc_outputs_minimal.mat`.
 
 ---
+
+
+## Step 5: Visualisation
+
+### 5.1 Expanding the downsampled result back to 91k and writing CIFTI files
+
+Every cluster value is copied to its member grayordinates with `group_indices` (`RC_high_res_downsampled.m`, section *Expand Downsampled Data to Original Resolution*; `RC_expand_full_res.m` does the same for difference maps). The 91,282-element vectors are written as `.dscalar.nii` through `cifti_read` / `ciftisavereset` on a template (`ones.dscalar.nii`) and viewed in Connectome Workbench (`wb_view`). The template is a dense scalar file in the standard HCP grayordinate space (29,696 + 29,716 cortical vertices of the 32k fs_LR surfaces and 31,870 subcortical voxels, 91,282 in total) with every value set to 1; it only supplies the CIFTI geometry. Any 91,282-grayordinate `.dscalar.nii` works as a starting point, e.g. `wb_command -cifti-math 'x*0+1' ones.dscalar.nii -var x <any_91282>.dscalar.nii`. Maps are usually shown as `log10(x + 1)`.
+
+### 5.2 Parcel-level maps
+
+`code/ftract_seeg/RC_to_cifti_Sim_status.m` writes the column of `I_node_max` for one stimulation site onto the Glasser dlabel (`Q1-Q6_RelatedValidation210...32k_fs_LR.dlabel.nii`), masking parcels within 20 mm of the site, in `log10` scale — this is how the DLPFC (`L_p9-46v`) and M1 maps of Fig. 4 and Supplementary Fig. S1 are produced.
+
+### 5.3 Dynamic plots and movie
+
+`rc_visualization_demo.m` produces, for the chosen `MOVIE_NODES`, the receiver × stimulus peak-current matrix, node × time heat-maps with the top-K receiving parcels labelled, all-node current curves, a real-space (MNI) snapshot of the strongest edges, and a three-panel MP4 movie of the 200 ms propagation (`MOVIE_STRIDE` frames).
+
+---
