@@ -202,3 +202,46 @@ Simulated time is model time: the parameters were scaled so that the dominant tr
 
 ---
 
+
+## Step 4: Solve the ODE System and Extract Output Metrics
+
+### 4.1 Governing equations
+
+Kirchhoff's current law at node `i`:
+
+```text
+C_i dV_i/dt = sum_j G_ij (V_j - V_i) + I_i(t)
+```
+
+or in matrix form `C dV/dt = -L V + I`, where `L = diag(sum_j G_ij) - G` is the weighted graph Laplacian of the conductance matrix. The right-hand side is implemented either as an explicit double loop over connected pairs (`capODE_downsampled`, `rc_ode_rhs`) or as `(-L*V + I_input) ./ C` (`rc_visualization_demo.m`); both are the same linear system.
+
+### 4.2 Node currents and metrics in the high-resolution TMS model
+
+From the voltage traces `v(i, t)`, `RC_high_res_downsampled.m` computes for every node and time point the inward current from neighbours with higher voltage (`Ip`) and the outward current to neighbours with lower voltage (`In`), using `(v_j - v_i) / R_ji / 2`, and then
+
+| Metric | Definition | File |
+|---|---|---|
+| `Imax` | `max_t (Ip + In)` — peak total current | `ODESolver/Imax.mat` |
+| `Ipmax` | `max_t Ip` — peak positive (inward) current | `ODESolver/Ipmax.mat` |
+| `Cpmax` | `max_t ∫ |Ip| dt` — accumulated positive charge | `ODESolver/Cpmax.mat` |
+| `E1max` (Emax) | `max_t ∫ |I · v| dt` — accumulated energy | `ODESolver/E1max.mat` |
+
+All four are compared with TMS-fMRI in Step 6.1 (Supplementary Figs S3, S5, S7).
+
+### 4.3 Node current, peak current and time-to-peak in the parcel-level model
+
+For each stimulation site `s` the F-TRACT scripts compute the total absolute current through node `i`,
+
+```text
+I_i(t) = sum_j | G_ij (V_i(t) - V_j(t)) |
+```
+
+and store, with rows = target nodes and columns = stimulation nodes:
+
+* `I_node_max(i, s) = max_t I_i(t)` — **peak propagation strength**, the quantity compared with F-TRACT response probability and amplitude (Figs 3, 4);
+* `TTP(i, s)` — time of the peak of `I_i(t)` (`rc_visualization_demo.m`), and the decay constant `Tau` and `HalfLife` fitted to the post-peak tail;
+* `DEL` (`rc_compute_delays_from_V` inside `RC_delay_scatter_refine.m`) — alternative timing read-outs of the same traces explored in the MATLAB script: first-passage time, mean transit time and `q50_I` (time at which the cumulative node current reaches half of its final value). The manuscript's Fig. 5 is produced by the Python scripts of Step 6.4, which use `TTP`, the time of the peak of `I_i(t)`, with values ≥ 200 ms set to `NaN`.
+
+`rc_visualization_demo.m` saves everything in `rc_outputs_minimal.mat`.
+
+---
