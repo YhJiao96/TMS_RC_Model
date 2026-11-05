@@ -4,7 +4,24 @@ This is the code and data release for the paper *An Electrical Circuit Model of 
 ![RC Modelling of the Brain Structural Connectomes Network](images/Picture_RC_Model.png)
 *The resistor-capacitor circuit based on the brain structural connectome network. The green nodes are the targeting brain regions we concerned, and the orange lines stands for the connection between those regions. In order to analyse the signal propagation through such network, we can take brain regions as capacitors and the connections as resistors. Then the brain network is transferred to a resistor-capacitor circuit network which we can use electric circuit knowledge to solve such network.*
 
+## Repository layout
 
+```text
+code/
+  RC_toy.m                      Step 2.1  n-node toy RC network
+  RC_atlas_single.m             Step 2.2  Schaefer-1000 + 12 subcortex model, single-node input
+  RC_atlas_SimNIBS.m            Step 2.2  same model, SimNIBS E-field input
+  Downsample_N_brain_map.m      Step 2.3  k-d-tree downsampling of the 91,282-node connectome
+  RC_high_res_downsampled.m     Steps 3–5 downsampled high-resolution model (TMS E-field input)
+  tms_fmri/                     Step 6.1  TMS-fMRI comparison (Supplementary Section S2)
+  ftract_seeg/                  Steps 2.4, 4.3, 5.2, 6.2, 6.3  F-TRACT comparison, MATLAB
+  python_figures/               Step 6.4  Python scripts that produce the manuscript's Figs 3–5
+data/                           cluster partition, E-field, coordinates and spin-test files; the connectome
+                                inputs are not redistributed, see "Data files" at the end
+images/                         schematic
+docs/tms_efield_pipeline_2024.md   the original step-by-step notes this README grew from
+LICENSE                         MIT
+```
 
 ## Step 1: TMS E-Field Simulation in SimNIBS
 
