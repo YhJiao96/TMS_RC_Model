@@ -110,6 +110,8 @@ In this step, we model the brain’s structural connectivity as a resistor-capac
 
 ### 2.1 Toy Model (Five-Node Model)
 
+**Files** — script: `code/RC_toy.m`; no input files.
+
 `code/RC_toy.m` builds an `n`-node RC network (default `n = 5`) with user-set resistances and capacitances, stimulates one node and plots the voltages.
 
 The toy model provides a simplified version of the RC network, using only five nodes(or any n nodes if you wish). This smaller network allows us to implement and test the basic principles of the RC circuit model and evaluate the effects of TMS-driven stimulation in a manageable setup. Each node represents a distinct "region" with a capacitor connected to the ground and each connection between nodes is treated as a resistor.
@@ -117,11 +119,15 @@ The toy model provides a simplified version of the RC network, using only five n
 
 ### 2.2 Atlas Segmentation Model
 
+**Files** — scripts: `code/RC_atlas_single.m`, `code/RC_atlas_SimNIBS.m`; input: the Schaefer-1000 SC and distance matrices (not redistributed), `data/Schreorder.csv`, `data/Subcortex-Sina.csv`, and for the E-field version `data/subject_coord_91k_normE.csv`.
+
 `code/RC_atlas_single.m` (single-node input) and `code/RC_atlas_SimNIBS.m` (E-field input) use the [Schaefer 2018](https://github.com/ThomasYeoLab/CBIG/tree/v0.14.3-Update_Yeo2011_Schaefer2018_labelname/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations) 1000-parcel atlas plus 12 subcortical regions. Inputs: the Schaefer-1000 + subcortex group SC and distance matrices (`SC_ds_hcp_tract_pro_ctx_sch7n1000p_sctx_fs14_*.mat`, `ED_ctx_sch7n1000p_sctx_na.mat`; HCP-derived connectomes of Mansour et al. 2021, **not redistributed**) and the ordering tables `data/Schreorder.csv`, `data/Subcortex-Sina.csv`. 
 
 The atlas segmentation model uses a standardized brain atlas, in this case we used the *Schaefer 2018* atlas map with 1000 cortical regions and 12 subcortex regions involved, to represent brain regions at a more realistic scale than the toy model. Each region in the atlas acts as a node in the network, and connections between regions are weighted according to structural connectivity data. This model provides more anatomical accuracy while still remaining computationally efficient.
 
 ### 2.3 Parcel-level model for the F-TRACT comparison (Glasser 360 + 14 subcortex, N = 374)
+
+**Files** — scripts: `code/ftract_seeg/RC_FTRACT_ODE_V23.m`, `code/ftract_seeg/RC_ftract_Caio_data.m`; input: `SC_data_neuron_2023_yihang.mat` or `X_struct_v1-19_FCO.mat`, and the ordering vectors (none redistributed, see Data files).
 
 Direct-electrical-stimulation responses in F-TRACT are tabulated on the HCP-MMP1.0 (Glasser) atlas, so the main validation uses a 374-node connectome: 360 cortical parcels (rows 1–360) and 14 subcortical regions (361–374; bilateral thalamus, caudate, putamen, pallidum, hippocampus, amygdala, accumbens; Tian et al. 2020). The HCP group consensus connectome (streamline count normalised by regional surface area, consensus over participants; Mansour et al. 2021, Seguin et al. 2023) is **not part of this repository**. We recommend building the connectome yourself from the HCP (1,000 participants) diffusion data with the pipeline of Mansour et al. (2021) ([sina-mansour/neural-identity](https://github.com/sina-mansour/neural-identity)); the specific matrices used here can be requested from Caio Seguin, Sina Mansour or the authors of this manuscript. In our analyses it is stored as `SC_data_neuron_2023_yihang.mat` with variables
 
@@ -136,6 +142,9 @@ Direct-electrical-stimulation responses in F-TRACT are tabulated on the HCP-MMP1
 ---
 
 ### 2.4 High-Resolution (Full-Size Structural Connectome, downsampled) Model
+
+**Files** — scripts: `code/Downsample_N_brain_map.m` (downsampling), `code/tms_fmri/RC_91k.m` (full resolution); input: `data/mnipositionc.csv`, `data/Subcortex-Sina.csv`, `data/subject_coord_91k_normE.csv` and the 91,282-node SC / tract-length matrices (`SCCount.mat`, `SCLength.mat`, not distributed); output: `data/tms_9656/SC_downsampled.mat`, `D_downsampled.mat`, `E_downsampled.mat` (saved by the script as `V_downsampled.mat`), `group_indices.mat`.
+
 
 The full connectome has 91,282 nodes (fs_LR 32k cortex + subcortex) and needs ≥ 64 GB RAM in MATLAB (`code/tms_fmri/RC_91k.m`). For the manuscript we therefore downsample it with `code/Downsample_N_brain_map.m`:
 > **Note:** Due to the large number of nodes and connections, this model using the full high-resolution matrices can be memory-intensive(request for 64GB memory for running the code in MATLAB) and require long computation times, we also provided a downsampling method which can downsample the nodes into clusters(e.g., 4x, 8x, or 10x ...). 
@@ -159,6 +168,8 @@ In this step, we setup all the boundary conditions for our ODE system: initial b
 
 ### 3.1 Input bounday condition
 
+**Files** — scripts: the simulation scripts listed in the table (the initial condition is set near the top of each); input: `data/tms_9656/E_downsampled.mat` for TMS, none for direct electrical stimulation.
+
 The stimulus pulse (1 ms for SEEG, < 1 ms for TMS) is short compared with the 50–200 ms propagation window, so it is applied as an **initial voltage** rather than a sustained current: the capacitor of each stimulated node is charged at `t = 0` and no external current flows afterwards (`I_i(t) = 0` for `t > 0`).
 
 | Modality | Script | Initial condition |
@@ -169,6 +180,8 @@ The stimulus pulse (1 ms for SEEG, < 1 ms for TMS) is short compared with the 50
 | Toy / atlas tutorial | `code/RC_toy.m`, `RC_atlas_*.m` | `V0(target_node) = 1`, or the Schaefer-parcel mean E-field. |
 
 ### 3.2 Resistance and capacitance from the connectome
+
+**Files** — scripts: `code/RC_high_res_downsampled.m` (section *Data Preparation*; uses `data/tms_9656/SC_downsampled.mat`, `D_downsampled.mat`, `group_indices.mat`), `code/ftract_seeg/RC_FTRACT_ODE_V23.m`, `RC_ftract_Caio_data.m`, `rc_visualization_demo.m` (374-node SC and distance).
 
 Each connection is a bundle of parallel axons with length `L_ij` and an effective cross-section proportional to the connectivity weight `W_ij`:
 
@@ -190,6 +203,8 @@ C_i = c * A_i
 
 ### 3.3 Time scale and resolution
 
+**Files** — the parameters `time_scale` and `num_points` are set in the *Adjustable / User parameters* block at the top of each simulation script.
+
 | Model | `time_scale` | `num_points` | Solver |
 |---|---|---|---|
 | High-resolution TMS (9,656 nodes) | 50 (model ms) | 100 | `ode23`, evaluated with `deval` |
@@ -205,6 +220,8 @@ Simulated time is model time: the parameters were scaled so that the dominant tr
 
 ### 4.1 Governing equations
 
+**Files** — functions: `capODE_downsampled` in `code/RC_high_res_downsampled.m`, `rc_ode_rhs` in `code/ftract_seeg/RC_FTRACT_ODE_V23.m`, the inline right-hand side in `rc_visualization_demo.m`, and `simulate_rc` in `code/python_figures/rc_ftract_core.py`.
+
 Kirchhoff's current law at node `i`:
 
 ```text
@@ -214,6 +231,8 @@ C_i dV_i/dt = sum_j G_ij (V_j - V_i) + I_i(t)
 or in matrix form `C dV/dt = -L V + I`, where `L = diag(sum_j G_ij) - G` is the weighted graph Laplacian of the conductance matrix. The right-hand side is implemented either as an explicit double loop over connected pairs (`capODE_downsampled`, `rc_ode_rhs`) or as `(-L*V + I_input) ./ C` (`rc_visualization_demo.m`); both are the same linear system.
 
 ### 4.2 Node currents and metrics in the high-resolution TMS model
+
+**Files** — scripts: `code/RC_high_res_downsampled.m`, `code/tms_fmri/RC_High_Mapping.m`; output: `ODESolver/voltage.mat`, `I.mat`, `Ip.mat`, `Imax.mat`, `Ipmax.mat`, `E1max.mat`, `Cpmax.mat`.
 
 From the voltage traces `v(i, t)`, `RC_high_res_downsampled.m` computes for every node and time point the inward current from neighbours with higher voltage (`Ip`) and the outward current to neighbours with lower voltage (`In`), using `(v_j - v_i) / R_ji / 2`, and then
 
@@ -227,6 +246,9 @@ From the voltage traces `v(i, t)`, `RC_high_res_downsampled.m` computes for ever
 All four are compared with TMS-fMRI in Step 6.1 (Supplementary Figs S3, S5, S7).
 
 ### 4.3 Node current, peak current and time-to-peak in the parcel-level model
+
+**Files** — scripts: `code/ftract_seeg/RC_FTRACT_ODE_V23.m`, `rc_visualization_demo.m`, `RC_delay_scatter_refine.m`; Python: `code/python_figures/simulate_rc_peak_xstruct.py`; output: `I_node_max`, `TTP` (`rc_outputs_minimal.mat`; `output/fig3a_bootstrap_ci/rc_peak_xstruct_w.npz`).
+
 
 For each stimulation site `s` the F-TRACT scripts compute the total absolute current through node `i`,
 
@@ -249,13 +271,28 @@ and store, with rows = target nodes and columns = stimulation nodes:
 
 ### 5.1 Expanding the downsampled result back to 91k and writing CIFTI files
 
+**Files** — script: `code/RC_high_res_downsampled.m` (sections *Expand Downsampled Data to Original Resolution* and *Plotting to dscalar Files*); input: `data/tms_9656/group_indices.mat`, the `ODESolver/*.mat` metrics and the template `ones.dscalar.nii`; output: `*_full.mat` and `.dscalar.nii` maps.
+
 Every cluster value is copied to its member grayordinates with `group_indices` (`RC_high_res_downsampled.m`, section *Expand Downsampled Data to Original Resolution*; `RC_expand_full_res.m` does the same for difference maps). The 91,282-element vectors are written as `.dscalar.nii` through `cifti_read` / `ciftisavereset` on a template (`ones.dscalar.nii`) and viewed in Connectome Workbench (`wb_view`). The template is a dense scalar file in the standard HCP grayordinate space (29,696 + 29,716 cortical vertices of the 32k fs_LR surfaces and 31,870 subcortical voxels, 91,282 in total) with every value set to 1; it only supplies the CIFTI geometry. Any 91,282-grayordinate `.dscalar.nii` works as a starting point, e.g. `wb_command -cifti-math 'x*0+1' ones.dscalar.nii -var x <any_91282>.dscalar.nii`. Maps are usually shown as `log10(x + 1)`.
 
 ### 5.2 Parcel-level maps
 
+**Files** — script: `code/ftract_seeg/RC_to_cifti_Sim_status.m`; Python: `code/python_figures/rc_ftract_cerebro.py`, `render_peak_current_empirical_probability.py`, `render_three_currents_four_timepoints.py`; input: `I_node_max` and the Glasser and Glasser + Tian S1 `.dlabel.nii` atlases (sources below).
+
 `code/ftract_seeg/RC_to_cifti_Sim_status.m` writes the column of `I_node_max` for one stimulation site onto the Glasser dlabel (`Q1-Q6_RelatedValidation210...32k_fs_LR.dlabel.nii`), masking parcels within 20 mm of the site, in `log10` scale — this is how the DLPFC (`L_p9-46v`) and M1 maps of Fig. 4 and Supplementary Fig. S1 are produced.
 
+`code/ftract_seeg/RC_to_cifti_Sim_status.m` writes the column of `I_node_max` for one stimulation site onto the Glasser dlabel, masking parcels within 20 mm of the site, in `log10` scale — this is how the DLPFC (`L_p9-46v`) and M1 maps of Fig. 4 and Supplementary Fig. S1 are produced.
+
+Atlas files (not included here; download them from the original sources or use your own Atlas):
+
+* **Cortex, 360 parcels** — HCP-MMP1.0 (Glasser et al. 2016, *A multi-modal parcellation of human cerebral cortex*, Nature 536: 171–178): `Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii`, distributed with the HCP data ([BALSA](https://balsa.wustl.edu/study/RVVG)).
+* **Cortex + subcortex, 374 regions** — the same cortical parcellation combined with the Melbourne Subcortex Atlas, scale I (Tian et al. 2020, *Topographic organization of the human subcortex unveiled with functional connectivity gradients*, Nature Neuroscience 23: 1421–1432): `Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR_Tian_Subcortex_S1.dlabel.nii`, from [github.com/yetianmed/subcortex](https://github.com/yetianmed/subcortex) (`Group-Parcellation/3T/Cortex-Subcortex/`). The Python renders (`rc_ftract_cerebro.py`) use this file; scales S2–S4 are in the same folder.
+
+Put both files in the folder that `RC_ATLAS_DIR` points to.
+
 ### 5.3 Dynamic plots and movie
+
+**Files** — script: `code/ftract_seeg/rc_visualization_demo.m`; output: PNG figures, an MP4 movie and `rc_outputs_minimal.mat` in the working folder.
 
 `rc_visualization_demo.m` produces, for the chosen `MOVIE_NODES`, the receiver × stimulus peak-current matrix, node × time heat-maps with the top-K receiving parcels labelled, all-node current curves, a real-space (MNI) snapshot of the strongest edges, and a three-panel MP4 movie of the 200 ms propagation (`MOVIE_STRIDE` frames).
 
