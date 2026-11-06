@@ -298,6 +298,96 @@ Put both files in the folder that `RC_ATLAS_DIR` points to.
 
 ---
 
+## Step 6: Comparison with Empirical Data
+
+Each subsection lists the files you need and the figure they produce. The MATLAB scripts expect their inputs in the working folder (edit the path lines at the top). The Python scripts are run from `code/python_figures/` after
+
+```bash
+pip install -r requirements.txt
+export RC_DATA_ROOT=/path/to/connectome_inputs  RC_FTRACT_DIR=/path/to/F-tract-2/MNI-HCP-MMP1  RC_ATLAS_DIR=/path/to/atlases
+```
+
+and write to `output/` (not tracked). `RC_DATA_ROOT` is the folder holding the 374-node connectome inputs, which are not redistributed (see Data files).
+
+### 6.1 TMS-fMRI (Supplementary Figs S2, S3, S7)
+
+**Files needed**
+
+| | |
+|---|---|
+| Scripts | `code/RC_high_res_downsampled.m` (TMS field as the only input), `code/tms_fmri/RC_High_Mapping.m` (TMS field + bilateral auditory cortex), `code/tms_fmri/SpinTest_HighRes.m` (correlation and spin test); `code/tms_fmri/E1removeaud.m` for the Schaefer-1000 version |
+| In this repository | `data/tms_9656/SC_downsampled.mat`, `D_downsampled.mat`, `E_downsampled.mat`, `group_indices.mat`, `filtered_selected_indices_high_res.mat` (auditory clusters, masked), `left_sphere_32k.mat`, `right_sphere_32k.mat`, `vertex_indices_L.mat`, `vertex_indices_R.mat`, `positionc.csv` |
+| Not in this repository | group TMS-fMRI map `nodes_fmri_values.mat` (Tik et al. 2023); CIFTI template `ones.dscalar.nii` (Step 5.1) |
+
+**Figure produced** — the model map (`Imax`, `Ipmax`, `E1max` or `Cpmax`) next to the empirical TMS-fMRI map, their rank–rank scatter with the Spearman correlation, and the spin-permutation null distribution (1,000 rotations).
+
+![TMS-fMRI comparison (Supplementary Fig. S2)](images/figS2_tms_fmri_example.png)
+
+### 6.2 F-TRACT response probability and amplitude (Fig. 3)
+
+**Files needed**
+
+| | |
+|---|---|
+| Python (figure as in the manuscript) | `simulate_rc_peak_xstruct.py` → `export_fig3a_bootstrap_ci.py` → `plot_fig3ab_bars.py`; `render_fig3c_site_correlation.py`; `compose_fig3.py` (shared module `rc_ftract_core.py`) |
+| MATLAB | `code/ftract_seeg/RC_FTRACT_ODE_V23.m` or `RC_ftract_Caio_data.m` (simulation and comparators), `RC_ftract_boot_subplot.m` (bars), `RC_spearman_corr_col_row.m`, `RC_scatter_2D_clear.m` (per-site correlations), `RC_CONTROL_ED_barplot.m`, `RC_CONTROL_ED_bar_value.m` (resistance-definition controls) |
+| Inputs, not in this repository | the 374-node connectome and ordering vectors (`RC_DATA_ROOT`); F-TRACT tables `probability`, `amplitude__median`, `N_implantations`, `N_stimulations`; `comparators/bct_measures.mat` (made with `data/ftract_374/comparators/bct_measures.m` and the Brain Connectivity Toolbox); the Glasser + Tian S1 atlas and `Cerebro_Viewer` for panel C |
+
+```bash
+python simulate_rc_peak_xstruct.py        # peak current and time-to-peak for all 374 stimulation sites
+python export_fig3a_bootstrap_ci.py       # correlations with 95 % bootstrap CIs (1,000 resamples)
+python plot_fig3ab_bars.py                # panels A, B
+python render_fig3c_site_correlation.py   # panels C, D (add --skip-render without Cerebro)
+python compose_fig3.py                    # composite
+```
+
+**Figure produced** — (A, B) Spearman correlation (translucent) and distance-partial correlation (opaque) between each model and the F-TRACT response probability / amplitude, for all, structurally connected (`F ≥ 0.75`) and unconnected (`F ≤ 0.25`) pairs; (C, D) per-stimulation-site correlation map and its distribution. Pairs: same hemisphere, Euclidean distance ≥ 20 mm, ≥ 5 implantations, ≥ 100 stimulations (probability) or ≥ 100 responses (amplitude).
+
+![F-TRACT probability and amplitude (Fig. 3)](images/fig3_ftract_probability_amplitude.png)
+
+### 6.3 Propagation from a single stimulation site (Fig. 4, Supplementary Fig. S1)
+
+**Files needed**
+
+| | |
+|---|---|
+| Python (figure as in the manuscript) | `rc_ftract_cerebro.py` (model run and renders), `render_peak_current_empirical_probability.py` (panels A, B), `render_three_currents_four_timepoints.py` (panel C) |
+| MATLAB | `code/ftract_seeg/rc_visualization_demo.m` (time courses, snapshots, movie), `RC_to_cifti_Sim_status.m` (CIFTI map of one site) |
+| Inputs, not in this repository | the 374-node connectome (`RC_DATA_ROOT`); the F-TRACT `probability` table; the Glasser and Glasser + Tian S1 `.dlabel.nii` atlases (Step 5.2); `Cerebro_Viewer` |
+
+```bash
+python rc_ftract_cerebro.py --model-variant legacy_xstruct_v8 --num-points 2000 --stim-label L_p9-46v_ROI
+```
+
+**Figure produced** — for stimulation of left DLPFC (`L_p9-46v`; M1 in Fig. S1): (A) peak node current, (B) the F-TRACT response probability for the same site, (C) net inward current at four time points over the 200 ms window.
+
+![Propagation after DLPFC stimulation (Fig. 4)](images/fig4_dlpfc_propagation.png)
+
+### 6.4 Time-to-peak versus empirical onset latency (Fig. 5)
+
+**Files needed**
+
+| | |
+|---|---|
+| Python (figure as in the manuscript) | `fig5_ttp_delay.py` (scatter panels), `fig5_delay_bars.py` (bars), `fig5_spin_test.py` (parcel-level spin test), `compose_fig5.py` (composite) |
+| MATLAB (earlier exploration of the same comparison) | `code/ftract_seeg/RC_delay_scatter_refine.m`, `RC_delay_scatter_plot_Amp.m`, `RC_delay_scatter_plot_Prob.m`, `RC_Ftract_peak_delay_corr.m` |
+| Inputs | `output/fig3a_bootstrap_ci/rc_peak_xstruct_w.npz` from 6.2; `data/tms_9656/left_sphere_32k.mat`, `right_sphere_32k.mat` (in this repository); not in this repository: the connectome inputs (`RC_DATA_ROOT`), F-TRACT `onset_delay__median`, `N_stimulations`, `N_implantations`, `probability`, `comparators/bct_measures.mat`, the Glasser `.dlabel.nii` |
+
+```bash
+python fig5_ttp_delay.py  --delay-variable onset_delay --count-variable stimulations --skip-neuron --output-dir ../../output/fig5_ttp/final
+python fig5_delay_bars.py --delay-variable onset_delay --count-variable stimulations --suffix _xstruct --output-dir ../../output/fig5_ttp/final
+python fig5_spin_test.py  --output-dir ../../output/fig5_ttp/final/spin
+python compose_fig5.py --results-dir ../../output/fig5_ttp/final --ttp-npz ../../output/fig3a_bootstrap_ci/rc_peak_xstruct_w.npz \
+    --bars-csv fig5_delay_bars_nstim_onset_delay_xstruct.csv --delay-variable onset_delay --count-variable stimulations \
+    --spin-dir ../../output/fig5_ttp/final/spin --axis-max 200 --x-max 150 --y-max 200 --point-style hexbin --band ci95 --font-size 21
+```
+
+**Figure produced** — (A, B) simulated time-to-peak against the F-TRACT median onset latency for all eligible pairs and for structurally unconnected pairs; (C) observed correlations against the spin null (1,000 parcel rotations); (D) full and distance-partial correlations for Euclidean distance, RC time-to-peak, shortest-path length and search information. Pairs as in 6.2 with a latency of 0–200 ms and ≥ 100 stimulations.
+
+![Time-to-peak versus onset latency (Fig. 5)](images/fig5_ttp_onset_latency.png)
+
+---
+
 
 
 ## Data files
