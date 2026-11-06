@@ -297,3 +297,56 @@ Put both files in the folder that `RC_ATLAS_DIR` points to.
 `rc_visualization_demo.m` produces, for the chosen `MOVIE_NODES`, the receiver × stimulus peak-current matrix, node × time heat-maps with the top-K receiving parcels labelled, all-node current curves, a real-space (MNI) snapshot of the strongest edges, and a three-panel MP4 movie of the 200 ms propagation (`MOVIE_STRIDE` frames).
 
 ---
+
+
+
+## Data files
+
+| File | Content | Source / terms |
+|---|---|---|
+| `SC_data_neuron_2023_yihang.mat` | 374-node consensus SC (`SC`), distance (`D`), connection frequency (`F`), `parcel_list` | **not redistributed** — HCP-derived group connectome (Mansour et al. 2021; Seguin et al. 2023). Build it from the HCP data with Sina Mansour's code, or request the matrices from Caio Seguin, Sina Mansour or the authors of this manuscript; place the file in your `RC_DATA_ROOT` folder |
+| `ReOrder_Caio_SC.mat`, `ReOreder_F_tract.mat`, `idx_sc.mat`, `glasser360_EuclideanDistance.mat` | ordering vectors aligning the connectome with the F-TRACT tables; cortical centroid distances and MNI centroids | **not redistributed** — provided together with the connectome data above (same contacts); place them in `RC_DATA_ROOT` |
+| `X_struct_v1-19_FCO.mat` (`X_struct.v8`: `W`, `ED`, `FCO`) | the connectome version used by the Python figure scripts and `RC_ftract_Caio_data.m` | **not redistributed** — same source and contacts as above; the scripts also accept a small file `X_struct_v8_W_ED_FCO.mat` holding just `W`, `ED`, `FCO` |
+| `data/ftract_374/comparators/bct_measures.m` → `bct_measures.mat` | MATLAB script that computes the graph-communication comparators (DE, SI, CMY, NE, SPE) from `W`/`ED` with the Brain Connectivity Toolbox; run it yourself to create `bct_measures.mat` in `RC_DATA_ROOT/comparators/` | script in repo; the matrices derive from the connectome and are not redistributed |
+| `data/tms_9656/group_indices.mat` | the 9,656 clusters of the downsampled 91k connectome (member grayordinate indices) | this project |
+| `data/tms_9656/E_downsampled.mat` | cluster-mean E-field for the Tik et al. DLPFC target | SimNIBS, Step 1 |
+| `data/tms_9656/positionc.csv`, `data/mnipositionc.csv`, `data/subject_coord_91k*.csv` | 91,282 node coordinates (MNI / subject space) and sample E-field | HCP S1200 surfaces; SimNIBS |
+| `data/tms_9656/vertex_indices_L/R.mat`, `left/right_sphere_32k.mat` | cortical vertex indices and sphere coordinates for the spin test | HCP S1200 fs_LR 32k |
+| `data/tms_9656/filtered_selected_indices_high_res.mat` | the 420 auditory-cortex clusters masked in the TMS-fMRI comparison | this project |
+| `data/tms_9656/downsampled_coordinates_schaefer1000.csv`, `Ro_networks.mat` | Schaefer-1000 centroids and Yeo-7 network labels | Schaefer et al. 2018 |
+| `data/Schreorder.csv`, `data/Subcortex-Sina.csv` | Schaefer-1000 + subcortex ↔ connectome ordering tables (Step 2.2) | this project |
+| Schaefer-1000 + subcortex SC and distance matrices (`SC_ds_hcp_tract_pro_ctx_sch7n1000p_sctx_fs14_*.mat`, `ED_ctx_sch7n1000p_sctx_na.mat`) | inputs of the Step 2.2 tutorial scripts | **not redistributed** — HCP-derived group connectome (Mansour et al. 2021); same route: build it with Sina Mansour's code or request it from Sina Mansour or the authors of this manuscript |
+| `data/tms_9656/SC_downsampled.mat`, `D_downsampled.mat` (90 MB each) | 9,656 × 9,656 cluster-level SC and tract length (symmetric, 11.2 M non-zeros each), produced by `Downsample_N_brain_map.m` from the HCP high-resolution connectome | this project, Step 2.3 |
+| F-TRACT `MNI-HCP-MMP1/*.txt.gz`; `Y_struct_v1-v17_PAL_res.mat` | empirical DES responses (probability, amplitude, latencies, counts) and the aligned structure derived from them | not redistributed; https://f-tract.eu |
+| Atlases: Glasser 360 `...32k_fs_LR.dlabel.nii`; Glasser + Tian S1 `...32k_fs_LR_Tian_Subcortex_S1.dlabel.nii` | cortical and cortico-subcortical parcellations for CIFTI export, the spin test and the surface renders | not included — Glasser et al. 2016 (HCP / [BALSA](https://balsa.wustl.edu/study/RVVG)); Tian et al. 2020 ([github.com/yetianmed/subcortex](https://github.com/yetianmed/subcortex)) |
+| Group-level acute TMS-fMRI response map (`nodes_fmri_values.mat`, `FMRIsurface.dscalar.nii`) | Tik et al. (2023), *Acute TMS/fMRI response explains offline TMS network effects – An interleaved TMS-fMRI study*, NeuroImage 267: 119833 | **not redistributed** — contact the corresponding author of that study for the data |
+| Full 91,282-node SC (`SCCount.mat`, 6.3 GB) | — | not distributed; the downsampled matrices above are sufficient to reproduce the reported results |
+
+Several scripts contain absolute paths (`/Users/yihjiao/Documents/MATLAB/...`, `/data/gpfs/...`); change them to your data folder before running.
+
+## Requirements
+
+* MATLAB R2024a with the Statistics and Machine Learning Toolbox (`corr`, `partialcorr`, `knnsearch`, `bootstrp`).
+* Brain Connectivity Toolbox (2019-03-03) on the path for the graph comparators.
+* Connectome Workbench (`wb_command`, `wb_view`) and the MATLAB `cifti` reader for CIFTI files.
+* SimNIBS ≥ 4.0 for the TMS E-field.
+* Python ≥ 3.11 with NumPy, SciPy, Matplotlib, nibabel (plus h5py, Pillow and `Cerebro_Viewer` for the optional parts) for `code/python_figures/`; see its `requirements.txt`.
+* Memory: the toy, atlas and parcel-level (374-node) models and all Python figure scripts run on an ordinary laptop. Only the high-resolution models need more: ≥ 16 GB RAM for the 9,656-cluster model and ≥ 64 GB for the full 91,282-node model (`RC_91k.m`).
+
+## Reference values
+
+Values of the manuscript (Figs 3 and 5 recomputed by the scripts in `code/python_figures/`; TMS-fMRI from Supplementary S2), for checking a rerun:
+
+| Comparison | Spearman ρ | partial ρ (controlling ED) |
+|---|---|---|
+| F-TRACT response probability, all eligible pairs (n = 8,916) | 0.57 | 0.25 |
+| F-TRACT response amplitude, all eligible pairs (n = 1,594) | 0.44 | 0.23 |
+| RC time-to-peak vs F-TRACT onset latency, all eligible pairs (n = 8,050) | 0.32 | 0.10 |
+| RC time-to-peak vs F-TRACT onset latency, unconnected pairs (n = 1,910) | 0.28 | 0.09 |
+| TMS-fMRI (Section 3.4), TMS field at DLPFC as the only input, across response metrics | 0.21–0.41 (p_spin = 0.05–0.17) | — |
+| TMS-fMRI (Section 3.4), DLPFC + bilateral auditory cortex | 0.33–0.40 (p_spin ≤ 0.003) | — |
+
+## License and citation
+
+Code: MIT License (`LICENSE`). F-TRACT, HCP and TMS-fMRI data remain under their own terms. Citation: to be added once the manuscript is available.
+
